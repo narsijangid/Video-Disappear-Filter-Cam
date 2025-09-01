@@ -140,6 +140,33 @@
             cursor: not-allowed;
         }
 
+        .control-btn .bi-record-circle {
+            font-size: 40px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn .bi-pause-circle-fill {
+            font-size: 40px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn .bi-play-circle-fill {
+            font-size: 40px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.4); }
             70% { box-shadow: 0 0 0 20px rgba(255, 71, 87, 0); }
@@ -167,7 +194,7 @@
 
         .settings-btn {
             position: absolute;
-            top: 60px;
+            top: 20px;
             right: 20px;
             z-index: 150;
             width: 45px;
@@ -314,7 +341,7 @@
         /* Recording UI */
         .recording-indicator {
             position: absolute;
-            top: 120px;
+            top: 30px;
             left: 20px;
             z-index: 150;
             background: rgba(255,71,87,0.9);

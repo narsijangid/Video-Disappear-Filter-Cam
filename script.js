@@ -7,11 +7,14 @@ class InvisibilityCamera {
                 this.backgroundImageData = null;
                 this.filterActive = false;
                 this.recording = false;
+                this.paused = false;
                 this.mediaRecorder = null;
                 this.recordedChunks = [];
                 this.animationId = null;
                 this.recordingStartTime = null;
                 this.recordingTimer = null;
+                this.totalPausedTime = 0;
+                this.pauseStartTime = null;
                 this.currentColorPreset = 'green';
                 
                 this.colorPresets = {
@@ -77,22 +80,30 @@ class InvisibilityCamera {
             captureBackground() {
                 if (!this.stream) return;
 
-                this.showStatus('Capturing background in 3 seconds... Move out of frame!', 3000);
+                let countdown = 3;
+                this.showStatus(`Capturing background in ${countdown}... Move out of frame!`, 1000);
                 
-                setTimeout(() => {
-                    const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = this.video.videoWidth;
-                    tempCanvas.height = this.video.videoHeight;
-                    const tempCtx = tempCanvas.getContext('2d');
-                    
-                    tempCtx.drawImage(this.video, 0, 0);
-                    this.backgroundImageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-                    
-                    this.showStatus('Background captured! Ready to record!', 2000);
-                    document.getElementById('headerText').textContent = 'Background captured! Start recording now';
-                    
-                    this.startFilter();
-                }, 3000);
+                const countdownInterval = setInterval(() => {
+                    countdown--;
+                    if (countdown > 0) {
+                        this.showStatus(`Capturing background in ${countdown}... Move out of frame!`, 1000);
+                    } else {
+                        clearInterval(countdownInterval);
+                        
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = this.video.videoWidth;
+                        tempCanvas.height = this.video.videoHeight;
+                        const tempCtx = tempCanvas.getContext('2d');
+                        
+                        tempCtx.drawImage(this.video, 0, 0);
+                        this.backgroundImageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                        
+                        this.showStatus('Background captured! Ready to record!', 2000);
+                        document.getElementById('headerText').textContent = 'Background captured! Start recording now';
+                        
+                        this.startFilter();
+                    }
+                }, 1000);
             }
 
             startFilter() {
@@ -187,12 +198,18 @@ class InvisibilityCamera {
                     return;
                 }
 
-                if (!this.recording) {
+                if (!this.recording && !this.paused) {
+                    // Start new recording
                     this.playRecordingStartSound();
                     this.startRecording();
-                } else {
+                } else if (this.recording && !this.paused) {
+                    // Pause recording
                     this.playRecordingStopSound();
                     this.pauseRecording();
+                } else if (this.paused) {
+                    // Resume recording
+                    this.playRecordingStartSound();
+                    this.resumeRecording();
                 }
             }
 
@@ -239,6 +256,8 @@ class InvisibilityCamera {
                 if (this.mediaRecorder && this.recording) {
                     this.mediaRecorder.stop();
                     this.recording = false;
+                    this.paused = true;
+                    this.pauseStartTime = Date.now();
                     this.stopRecordingTimer();
                     this.updateRecordingUI();
                 }
@@ -248,6 +267,9 @@ class InvisibilityCamera {
                 this.recordedChunks = [];
                 this.videoBlob = null;
                 this.recording = false;
+                this.paused = false;
+                this.totalPausedTime = 0;
+                this.pauseStartTime = null;
                 this.stopRecordingTimer();
                 this.updateRecordingUI();
                 this.hideDownloadSection();
@@ -257,6 +279,50 @@ class InvisibilityCamera {
             finishRecording() {
                 if (this.mediaRecorder && this.recording) {
                     this.pauseRecording();
+                }
+            }
+
+            resumeRecording() {
+                if (!this.paused) return;
+                
+                try {
+                    const canvasStream = this.canvas.captureStream(30);
+                    const audioTrack = this.stream.getAudioTracks()[0];
+                    
+                    if (audioTrack) {
+                        canvasStream.addTrack(audioTrack);
+                    }
+
+                    this.mediaRecorder = new MediaRecorder(canvasStream, {
+                        mimeType: 'video/webm;codecs=vp9'
+                    });
+
+                    this.mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            this.recordedChunks.push(event.data);
+                        }
+                    };
+
+                    this.mediaRecorder.onstop = () => {
+                        const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
+                        this.videoBlob = blob;
+                        this.showDownloadSection();
+                    };
+
+                    this.mediaRecorder.start();
+                    this.recording = true;
+                    this.paused = false;
+                    
+                    if (this.pauseStartTime) {
+                        this.totalPausedTime += Date.now() - this.pauseStartTime;
+                        this.pauseStartTime = null;
+                    }
+                    
+                    this.updateRecordingUI();
+                    this.startRecordingTimer();
+                    
+                } catch (error) {
+                    this.showStatus('❌ Resume failed: ' + error.message, 3000);
                 }
             }
 
@@ -272,6 +338,12 @@ class InvisibilityCamera {
                     discardBtn.style.display = 'flex';
                     doneBtn.style.display = 'flex';
                     indicator.classList.add('show');
+                } else if (this.paused) {
+                    recordBtn.innerHTML = '<i class="bi bi-play-circle-fill"></i>';
+                    recordBtn.classList.remove('recording');
+                    discardBtn.style.display = 'flex';
+                    doneBtn.style.display = 'flex';
+                    indicator.classList.remove('show');
                 } else {
                     recordBtn.innerHTML = '<i class="bi bi-record-circle"></i>';
                     recordBtn.classList.remove('recording');
@@ -284,7 +356,7 @@ class InvisibilityCamera {
             startRecordingTimer() {
                 this.recordingTimer = setInterval(() => {
                     if (this.recordingStartTime) {
-                        const elapsed = Date.now() - this.recordingStartTime;
+                        const elapsed = Date.now() - this.recordingStartTime - this.totalPausedTime;
                         const minutes = Math.floor(elapsed / 60000);
                         const seconds = Math.floor((elapsed % 60000) / 1000);
                         document.getElementById('recordingTime').textContent = 
