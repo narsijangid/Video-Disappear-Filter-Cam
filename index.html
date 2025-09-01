@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+   <link rel="stylesheet" href="style.css">
+    <title>Invisibility Camera</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Permission Overlay -->
+        <div class="permission-overlay" id="permissionOverlay">
+            <div class="permission-content">
+                <div class="permission-icon">
+                    <i class="bi bi-phone-fill"></i>
+                </div>
+                <h2>Invisibility Camera</h2>
+                <p>Turn yourself invisible with this magical camera filter. Choose your color and start recording!</p>
+                <button class="start-btn" onclick="initializeCamera()">
+                    <i class="bi bi-rocket-takeoff"></i> Start Camera
+                </button>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <div class="header" style="display: none;">
+            <h1><i class="bi bi-magic"></i> Invisibility Camera</h1>
+            <p id="headerText">Tap settings to choose your invisibility color</p>
+        </div>
+
+        <!-- Settings Button -->
+        <button class="settings-btn" onclick="toggleSettings()">
+            <i class="bi bi-gear-fill"></i>
+        </button>
+
+        <!-- Recording Indicator -->
+        <div class="recording-indicator" id="recordingIndicator">
+            <div class="recording-dot"></div>
+            <span id="recordingTime">00:00</span>
+        </div>
+
+        <!-- Camera Container -->
+        <div class="camera-container">
+            <video id="video" autoplay muted playsinline></video>
+            <canvas id="output"></canvas>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button class="control-btn" id="backgroundBtn" onclick="captureBackground()" title="Capture Background">
+                <i class="bi bi-camera-fill"></i>
+            </button>
+            <button class="control-btn primary" id="recordBtn" onclick="toggleRecording()" title="Record">
+                <i class="bi bi-record-circle"></i>
+            </button>
+            <button class="control-btn" id="discardBtn" onclick="discardRecording()" title="Discard" style="display:none;">
+                <i class="bi bi-trash-fill"></i>
+            </button>
+            <button class="control-btn" id="doneBtn" onclick="finishRecording()" title="Done" style="display:none;">
+                <i class="bi bi-check-circle-fill"></i>
+            </button>
+        </div>
+
+        <!-- Side Panel -->
+        <div class="side-panel" id="sidePanel">
+            <div class="color-section">
+                <h3><i class="bi bi-palette-fill"></i> Invisibility Color</h3>
+                <div class="color-options">
+                    <div class="color-option active" data-color="green" onclick="selectColor('green')">
+                        <i class="bi bi-circle-fill" style="color: #00ff00;"></i> Green
+                    </div>
+                    <div class="color-option" data-color="blue" onclick="selectColor('blue')">
+                        <i class="bi bi-circle-fill" style="color: #0066ff;"></i> Blue
+                    </div>
+                    <div class="color-option" data-color="red" onclick="selectColor('red')">
+                        <i class="bi bi-circle-fill" style="color: #ff0000;"></i> Red
+                    </div>
+                    <div class="color-option" data-color="orange" onclick="selectColor('orange')">
+                        <i class="bi bi-circle-fill" style="color: #ff6600;"></i> Orange
+                    </div>
+                    <div class="color-option" data-color="pink" onclick="selectColor('pink')">
+                        <i class="bi bi-circle-fill" style="color: #ff69b4;"></i> Pink
+                    </div>
+                    <div class="color-option" data-color="purple" onclick="selectColor('purple')">
+                        <i class="bi bi-circle-fill" style="color: #9900ff;"></i> Purple
+                    </div>
+                    <div class="color-option" data-color="yellow" onclick="selectColor('yellow')">
+                        <i class="bi bi-circle-fill" style="color: #ffff00;"></i> Yellow
+                    </div>
+                    <div class="color-option" data-color="custom" onclick="selectColor('custom')">
+                        <i class="bi bi-palette"></i> Custom
+                    </div>
+                </div>
+
+                <div class="custom-controls" id="customControls">
+                    <div class="slider-group">
+                        <label>Hue Range</label>
+                        <div class="slider-container">
+                            <span>Min:</span>
+                            <input type="range" id="hueMin" min="0" max="180" value="40" oninput="updateCustomColor()">
+                            <span class="slider-value" id="hueMinVal">40</span>
+                        </div>
+                        <div class="slider-container">
+                            <span>Max:</span>
+                            <input type="range" id="hueMax" min="0" max="180" value="80" oninput="updateCustomColor()">
+                            <span class="slider-value" id="hueMaxVal">80</span>
+                        </div>
+                    </div>
+                    <div class="slider-group">
+                        <label>Saturation Range</label>
+                        <div class="slider-container">
+                            <span>Min:</span>
+                            <input type="range" id="satMin" min="0" max="255" value="82" oninput="updateCustomColor()">
+                            <span class="slider-value" id="satMinVal">82</span>
+                        </div>
+                        <div class="slider-container">
+                            <span>Max:</span>
+                            <input type="range" id="satMax" min="0" max="255" value="255" oninput="updateCustomColor()">
+                            <span class="slider-value" id="satMaxVal">255</span>
+                        </div>
+                    </div>
+                    <div class="slider-group">
+                        <label>Brightness Range</label>
+                        <div class="slider-container">
+                            <span>Min:</span>
+                            <input type="range" id="valMin" min="0" max="255" value="78" oninput="updateCustomColor()">
+                            <span class="slider-value" id="valMinVal">78</span>
+                        </div>
+                        <div class="slider-container">
+                            <span>Max:</span>
+                            <input type="range" id="valMax" min="0" max="255" value="255" oninput="updateCustomColor()">
+                            <span class="slider-value" id="valMaxVal">255</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Overlay -->
+        <div class="status-overlay" id="statusOverlay">
+            <div id="statusMessage">Ready to start!</div>
+        </div>
+
+        <!-- Download Section -->
+        <div class="download-section" id="downloadSection">
+            <div class="download-popup">
+                <button class="close-btn" onclick="closeDownloadPopup()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <h3><i class="bi bi-download"></i> Download Recording</h3>
+                <p>Your invisibility video is ready!</p>
+                <button class="download-btn" onclick="downloadVideo()">
+                    <i class="bi bi-download"></i> Download Video
+                </button>
+            </div>
+        </div>
+    </div>
+
+   <script src="script.js"></script>
+</body>
+</html>
